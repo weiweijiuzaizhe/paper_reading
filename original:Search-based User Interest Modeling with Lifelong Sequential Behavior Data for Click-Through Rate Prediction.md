@@ -179,6 +179,10 @@ Table 2 presents the results of all the compared models. Compared with DIN, the 
 As shown in Table 3, all the methods with filter strategy extremely improve model performance compared with simply average pooling the embedding. It indicates that there indeed exists massive noise in original long-term behavior sequence which may undermine long-term user interest learning. Compared with models with only one stage search, The proposed search model with a two-stage search strategy makes further progress by introducing an attention-based search on the second stage. It indicates that precisely modeling users’ diverse long-term interest on target items is helpful on CTR prediction tasks. And after the first stage search, the filtered behavior sequences usually are much shorter than the original sequences. The attention operations wouldn’t burden the online serving RTP system in real-time.
 
 Involving time embedding achieves further improvement which demonstrates that the contribution of user behaviors in different period differs.
+![image.png](https://s2.loli.net/2024/11/11/t4YIzrA7NGwmfjT.jpg)
+**Figure 4: The distribution of click samples from DIEN and SIM.** The clicks are split into two parts: long-term (>14 days) and short-term (≤14 days), which are aggregated according to the proposed metric Days till Last Same Category Behavior (d<sub>category</sub>). The aggregated scale is different in short-term (2 days) and long-term (20 days). The boxes demonstrate the lift of proportion of clicks from SIM w.r.t. different d<sub>category</sub>.
+
+
 
 #### 5.5 Results on Industrial Dataset
 
@@ -197,14 +201,34 @@ Involving time embedding achieves further improvement which demonstrates that th
 
 We further conduct experiments on the dataset collected from the online display advertisement system of Alibaba. Table 4 shows the results. Compared with hard-search in the first stage, soft-search performs better. Meanwhile, we notice that there is just a slight gap between the two search strategies at the first stage. Applying the soft-search in the first stage cost more computation and storage resources. Because the nearest neighbors search method would be utilized in an online serving, while hard-search only need searching from a two-level index table which would be built in offline. Hence hard-search is more efficient and system friendly. Moreover, for two different search strategies, we do statistics on over 1 million samples and 100 thousand users with long-term historical behaviors from the industrial dataset. The results show that the user behaviors searched by hard-search strategy could cover 75% of that from the soft-search strategy. Finally, we choose the simpler hard-search strategy at the first stage for the trade-off between efficiency and performance. SIM improves MIMN with AUC gain of 0.008, which is significant for our business.
 
-**Online A/B Testing.** Since 2019, we have deployed the proposed solution in the display advertising system in Alibaba. From 2020-01-07 to 2020-02-07, we conduct a strict online A/B testing experiment to validate the proposed SIM model. Compared to MIMN (our last product model), SIM achieves great gain in Alibaba display advertising scene, which shows in table 5. Now, SIM has been deployed online and serves the main scene traffic every day, which contributes significant business revenue growth.
+**Online A/B Testing.**     
+
+
+**Table 5: SIM’s Lift rate of online results compared with MIMN from Jan 7 to Feb 7, 2020, in Guess What You Like column of Taobao App Homepage**
+
+| Metric     | CTR   | RPM   |
+|------------|-------|-------|
+| Lift rate  | 7.1%  | 4.4%  |
+
+Since 2019, we have deployed the proposed solution in the display advertising system in Alibaba. From 2020-01-07 to 2020-02-07, we conduct a strict online A/B testing experiment to validate the proposed SIM model. Compared to MIMN (our last product model), SIM achieves great gain in Alibaba display advertising scene, which shows in table 5. Now, SIM has been deployed online and serves the main scene traffic every day, which contributes significant business revenue growth.
 
 **Rethinking Search Model.** We make great efforts on users’ long-term interest modeling and the proposed SIM achieves good performance on both offline and online evaluation. But does SIM perform better as a result of precise long-term interest modeling? And will SIM prefer to recommend items relevant to people’s long-term interest? To answer the two questions, we formulate another metric. **Days till Last Same Category Behavior** (dₐcₐₜₑgₒᵣy) of a click sample is defined as the days between the users' past behavior on items with the same category as the click sample until the click event happens. For example, user u₁ click an item i₁ with category c₁ and u₁ clicked an item j which has the same category with i₁ 5 days ago, and that u₁’s past behavior on c₁. If the click event is denoted as s₃, then the Days till Last Same Category Behavior of sample s₃ will be 5 (dₐcₐₜₑgₒᵣy = 5). Moreover, if user u₁ has never behaviors on category c₁, we will set dₐcₐₜₑgₒᵣy as -1. For a specific model, dₐcₐₜₑgₒᵣy can be used to evaluate the model selection preference on long-term or short-term interest.
 
 After online A/B Testing, we analyze the click samples from SIM and DIEN, which is the last version of the short-term CTR prediction model, based on the proposed metric dₐcₐₜₑgₒᵣy. The clicks distribution on dₐcₐₜₑgₒᵣy is shown in Figure 4. It can be found that there is almost no difference between the two models on short-term part (dₐcₐₜₑgₒᵣy < 14) because both SIM and DIEN have short-term user behavior features in the last 14 days. While on the long-term part SIM accounts larger proportion. Moreover, we static the average of dₐcₐₜₑgₒᵣy and the probability of user has historical category behaviors on target item (p(dₐcₐₜₑgₒᵣy > -1)) on the industrial dataset as shown in Table 6. The statistics result on the industrial dataset proves that the improvement of SIM indeed as a result of better longterm interest modeling and compared with DIEN, SIM prefers to recommend items relevant to people's long-term behaviors.
 
+**Table 6: Statistics of d<sub>category</sub> on industrial dataset recommendations**
+
+| Model | Average d<sub>category</sub> | p(d<sub>category</sub> > -1) |
+|-------|------------------------------|------------------------------|
+| DIEN  | 11.2                         | 0.91                         |
+| SIM   | 13.3                         | 0.94                         |
 
 **Practical Experience For Deployment.** Here we introduce our hands-on experiments of implementing SIM in an online serving system. High traffic in Alibaba is well-known, which serves more than 1 million users per second at a traffic peak. Moreover, for each user, the RTP system needs to calculate the predicted CTR of hundreds of candidate items. We build a two-stage index for the whole user behavior data offline, and it will be updated daily. The first stage is the user id. In the second stage, the lifelong behavior data of one user is indexed by the categories, which this user has interacted with. Although the number of candidate items is hundreds, the number of categories of these items is usually less than 20. Meanwhile, the length of sub behavior sequence from GSU for each category is truncated by 200 (the original length are usually less than 150). In that way, the traffic of each request from users is limited and acceptable. Besides, we optimize the calculation of multi-head attention in ESU by deep kernel fusion.
+
+
+![image.png](https://s2.loli.net/2024/11/11/o4BZbsCEL71DuAn.jpg)
+Figure 5: System performance of realtime CTR prediction system w.r.t. different throughputs. The length of user behavior is truncated to 1000 in MIMN and DIEN, while the
+length of user behavior can scale up to ten thousand in SIM. The maximum throughputs of DIEN is 200, so there is justone point in the figure.
 
 Our real-time CTR prediction system performance of latency w.r.t. throughout with DIEN, MIMN, and SIM show in Figure 5. It is worth noticing that the maximum length of user behavior that MIMN can handle is 1000 and the performance showed is based on the truncated behavior data. While the length of user behavior in SIM is not truncated and can scale up to 54000, pushing the maximum length up to 54x. SIM serving with over ten thousand behavior only increases latency by 5ms compared to MIMN serving with truncated user behavior.
 
