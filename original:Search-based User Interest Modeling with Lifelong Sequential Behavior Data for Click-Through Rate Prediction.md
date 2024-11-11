@@ -36,7 +36,9 @@ __Long-term User Interest.__ [8] shows that considering long- term historical be
 It has been proven to be effective by modeling user behavior data for CTR prediction modeling. Typically, attention-based CTR models, such as DIN[20] and DIEN[19], design complex model structure and involve attention mechanism to capture user diverse interest by searching effective knowledge from user behavior sequence, with inputs from different candidate items. But in a real-world system, these models can only handle short-term behavior sequence data, of which the length is usually less than 150. On the other hand, the long-term user behavior data is valuable, and modeling the long- term interest of users may bring more diverse recommendation results for users. It seems we are on the horns of a dilemma: we cannot handle the valuable life-long user behavior data with the effective but complex methods in a real-world system. To tackle this challenge, we propose a new modeling paradigm, which is named as Search-based Interest Model (SIM). SIM follows a two-stage search strategy and can handle long user behavior sequences in an efficient way. In this section, we will introduce the overall workflow of SIM first and then introduce the two proposed search units in detail
 
 ### 3.1 Overall Workflow
-![image.png](https://s2.loli.net/2024/11/11/DMxZcYqsnQkfuLK.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/DMxZcYqsnQkfuLK.jpg" alt="image.png" width="2000"/>
+</p>
 
 Figure 1: Search-based Interest Model (SIM). SIM follows a two-stage search strategy and is composed of two units: (i) the General Search Unit seeks the most related K behaviors from over ten thousand user behaviors, (ii) the Exact Search Unit utilizes multi-head attention to capture the diverse user interest. And then it follows the traditional Embedding&MLP paradigm which takes the output of precise long-time user interest and other features as inputs. In this paper, we introduce hard-search and soft-search for the GSU. Hard-search means select the behavior data belongs to the same category of the candidate item. Soft-search means indexing each user behavior data based on the embedding vectors and using maximum inner product search to seek Top-K behavior. For soft-search, GSU and ESU share the same embedding params which are trained simultaneously during the learning process, and the Top-K behavior sequence is generated based on the newest params.
 
@@ -58,7 +60,9 @@ Given a candidate item (the target item to be scored by CTR model), only a part 
 
 Given the list of user behaviors B = [b₁; b₂; ⋯ ; bₜ], where bᵢ is the i-th user behavior and T is the length of user behaviors. The general search unit can calculate relevant score rᵢ for each behavior bᵢ with the candidate item and then select the Top-K relevant behaviors with score rᵢ as sub behavior sequence B*. The difference between hard-search and soft-search is the formulation of relevant score rᵢ:
 
-![image.png](https://s2.loli.net/2024/11/11/AGxpevWoZdaMUPm.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/AGxpevWoZdaMUPm.jpg" alt="image.png" width="500"/>
+</p>
 
 **Hard-search**. The hard-search model is non-parametric. Only behavior belongs to the same category as the candidate item will be selected and aggregated as a sub behavior sequence to be sent to the exact search unit. Here Cₐ and Cᵢ denote the categories of target item and the i-th behavior bᵢ that belong to correspondingly. Hard-search is straightforward but later in section 4 we will show how it is quite suitable for online serving.
 
@@ -66,7 +70,9 @@ Given the list of user behaviors B = [b₁; b₂; ⋯ ; bₜ], where bᵢ is the
 
 It should be noticed that distributions of long-term and short-term data are different. Thus, directly using the parameters learned from short-term user interest modeling in soft-search model may mislead the long-term user interest modeling. In this paper, the parameters of soft-search model is trained under an auxiliary CTR prediction task based on long-term behavior data, illustrated as soft search training in the left of Figure 1. The behaviors representation Uᵣ is obtained by multiplying the rᵢ and eᵢ:
 
-![image.png](https://s2.loli.net/2024/11/11/9SzB3TkaOn2IKAV.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/9SzB3TkaOn2IKAV.jpg" alt="image.png" width="500"/>
+</p>
 
 The behaviors representation Uᵣ and the target vector eₐ are then concatenated as the input of following MLP (Multi-Layer Perception). Note that if the user behavior grows to a certain extent, it is impossible to directly fed the whole user behaviors into the model. In that situation, one can randomly sample sets of sub-sequence from the long sequential user behaviors, which still follows the same distribution of the original one.
 
@@ -76,18 +82,24 @@ In the first search stage, top-K related sub user behavior sequence B* w.r.t. th
 
 Considering that these selected user behaviors across a long time so that the contribution of user behaviors are different, we involve the sequence temporal property for each behavior. Specifically, the time intervals D = [Δ₁; Δ₂; ⋯; Δₖ] between target item and selected K user behaviors are used to provide temporal distance information. The B* and D are encoded as embedding E* = [e₁*; e₂*; ⋯; eₖ*] and Eₜ = [e₁ᵗ; e₂ᵗ; ⋯; eₖᵗ], respectively. eⱼ* and eⱼᵗ are concatenated as the final representation of the user behavior which is denoted as zⱼ = concat(eⱼ*, eⱼᵗ). We take advantage of multi-head attention to capture the diverse user interest:
 
-![image.png](https://s2.loli.net/2024/11/11/hm9IxcC3fdzKra8.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/hm9IxcC3fdzKra8.jpg" alt="image.png" width="500"/>
+</p>
 
 where ![image.png](https://s2.loli.net/2024/11/11/mpC59KrPwUueQVH.jpg) is the i-th attention score and headᵢ is the i-th head in multi-head attention. Wᵦᵢ and Wₐᵢ are the i-th parameter of weight. The final user longtime diverse interest is represented as Uₗₜ = concat(head₁; ⋯; headq). It is then fed into the MLP for CTR prediction.
 
 Finally, the general search unit and exact search unit are trained simultaneously under Cross-entropy loss function.
-![image.png](https://s2.loli.net/2024/11/11/hl1McTCFLt7oRqE.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/hl1McTCFLt7oRqE.jpg" alt="image.png" width="500"/>
+</p>
 where α and β are hyperparameters to control the loss weights. In our experiments, if GSU uses the soft-search model, both α and β are set as 1. GSU with the hard-search model is nonparametric and the α is set as 0.
 
 ## 4 IMPLEMENTATION FOR ONLINE SERVING
 In this section, we introduce our hands-on experience of implementing SIM in the display advertising system in Alibaba
 
-![image.png](https://s2.loli.net/2024/11/11/LcAXOlae3QJprxV.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/LcAXOlae3QJprxV.jpg" alt="image.png" width="2000"/>
+</p>
 Figure 2: Real-Time Prediction (RTP) system for CTR task in our industrial display advertising system. It consists of two key components: computation node and prediction server.
 It would bring great pressure of storage and latency for RTP online system with long sequential user behavior data.
 
@@ -98,7 +110,9 @@ Industrial recommender or advertising systems need to process massive traffic re
 Taking lifelong user behavior into consideration, it’s even harder to make a long-term user interest model serving in real-time industrial system. The storage and latency constraints could be the bottleneck of the long-term user interest model [8]. Traffic would increase linearly as the length of user behavior sequence grows. Moreover, our system serves more than 1 million users per second at traffic peak. Hence, it is a great challenge to deploy a long-term model to the online system.
 
 #### 4.2 Search-based Interest Model for Online Serving System
-![image.png](https://s2.loli.net/2024/11/11/hCFkGAPp5uKgB1V.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/hCFkGAPp5uKgB1V.jpg" alt="image.png" width="2000"/>
+</p>
 Figure 3: CTR prediction system with proposed SIM model.The new system joins a hard-search module to seek the effective behaviors with target item from long sequential behavior data. The index of user behavior tree is built early in the offline manner, saving most of latency cost for online  serving.
 
 
@@ -179,7 +193,9 @@ Table 2 presents the results of all the compared models. Compared with DIN, the 
 As shown in Table 3, all the methods with filter strategy extremely improve model performance compared with simply average pooling the embedding. It indicates that there indeed exists massive noise in original long-term behavior sequence which may undermine long-term user interest learning. Compared with models with only one stage search, The proposed search model with a two-stage search strategy makes further progress by introducing an attention-based search on the second stage. It indicates that precisely modeling users’ diverse long-term interest on target items is helpful on CTR prediction tasks. And after the first stage search, the filtered behavior sequences usually are much shorter than the original sequences. The attention operations wouldn’t burden the online serving RTP system in real-time.
 
 Involving time embedding achieves further improvement which demonstrates that the contribution of user behaviors in different period differs.
-![image.png](https://s2.loli.net/2024/11/11/t4YIzrA7NGwmfjT.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/t4YIzrA7NGwmfjT.jpg" alt="image.png" width="500"/>
+</p>
 **Figure 4: The distribution of click samples from DIEN and SIM.** The clicks are split into two parts: long-term (>14 days) and short-term (≤14 days), which are aggregated according to the proposed metric Days till Last Same Category Behavior (d<sub>category</sub>). The aggregated scale is different in short-term (2 days) and long-term (20 days). The boxes demonstrate the lift of proportion of clicks from SIM w.r.t. different d<sub>category</sub>.
 
 
@@ -226,7 +242,9 @@ After online A/B Testing, we analyze the click samples from SIM and DIEN, which 
 **Practical Experience For Deployment.** Here we introduce our hands-on experiments of implementing SIM in an online serving system. High traffic in Alibaba is well-known, which serves more than 1 million users per second at a traffic peak. Moreover, for each user, the RTP system needs to calculate the predicted CTR of hundreds of candidate items. We build a two-stage index for the whole user behavior data offline, and it will be updated daily. The first stage is the user id. In the second stage, the lifelong behavior data of one user is indexed by the categories, which this user has interacted with. Although the number of candidate items is hundreds, the number of categories of these items is usually less than 20. Meanwhile, the length of sub behavior sequence from GSU for each category is truncated by 200 (the original length are usually less than 150). In that way, the traffic of each request from users is limited and acceptable. Besides, we optimize the calculation of multi-head attention in ESU by deep kernel fusion.
 
 
-![image.png](https://s2.loli.net/2024/11/11/o4BZbsCEL71DuAn.jpg)
+<p align="center">
+  <img src="https://s2.loli.net/2024/11/11/o4BZbsCEL71DuAn.jpg" alt="image.png" width="500"/>
+</p>
 Figure 5: System performance of realtime CTR prediction system w.r.t. different throughputs. The length of user behavior is truncated to 1000 in MIMN and DIEN, while the
 length of user behavior can scale up to ten thousand in SIM. The maximum throughputs of DIEN is 200, so there is justone point in the figure.
 
