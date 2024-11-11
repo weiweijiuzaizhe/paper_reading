@@ -85,6 +85,12 @@ Finally, the general search unit and exact search unit are trained simultaneousl
 where α and β are hyperparameters to control the loss weights. In our experiments, if GSU uses the soft-search model, both α and β are set as 1. GSU with the hard-search model is nonparametric and the α is set as 0.
 
 ## 4 IMPLEMENTATION FOR ONLINE SERVING
+In this section, we introduce our hands-on experience of implementing SIM in the display advertising system in Alibaba
+
+![image.png](https://s2.loli.net/2024/11/11/LcAXOlae3QJprxV.jpg)
+Figure 2: Real-Time Prediction (RTP) system for CTR task in our industrial display advertising system. It consists of two key components: computation node and prediction server.
+It would bring great pressure of storage and latency for RTP online system with long sequential user behavior data.
+
 #### 4.1 Challenges of Online Serving with Lifelong User Behavior Data
 
 Industrial recommender or advertising systems need to process massive traffic requests in one second, which needs the CTR model to respond in real-time. Typically, the serving latency should be less than 30 milliseconds. Figure 2 briefly illustrates Real Time Prediction (RTP) system for CTR task in our online display advertising system.
@@ -92,6 +98,10 @@ Industrial recommender or advertising systems need to process massive traffic re
 Taking lifelong user behavior into consideration, it’s even harder to make a long-term user interest model serving in real-time industrial system. The storage and latency constraints could be the bottleneck of the long-term user interest model [8]. Traffic would increase linearly as the length of user behavior sequence grows. Moreover, our system serves more than 1 million users per second at traffic peak. Hence, it is a great challenge to deploy a long-term model to the online system.
 
 #### 4.2 Search-based Interest Model for Online Serving System
+![image.png](https://s2.loli.net/2024/11/11/hCFkGAPp5uKgB1V.jpg)
+Figure 3: CTR prediction system with proposed SIM model.The new system joins a hard-search module to seek the effective behaviors with target item from long sequential behavior data. The index of user behavior tree is built early in the offline manner, saving most of latency cost for online  serving.
+
+
 
 In section 3.2, we propose two kinds of general search unit, soft-search model and hard-search model. For both soft and hard search model, we conduct extensive offline experiments on industrial data, which is collected from the online display advertising system in Alibaba. We observe that the Top-K behavior generated from soft-search model is extremely similar to the result of hard-search model. In other words, most of the top-K behavior from soft-search generally belong to the category of the target item. It is a characteristic of data in our scenario. In e-commerce websites, items belonging to the same category are similar in most cases. Considering this, although soft-search model performs slightly better than hard-search model in offline experiments, refer to table 4 for details, after balancing the performance gain and resource consumption, we choose the hard-search model to deploy SIM in our advertising system.
 
@@ -104,6 +114,17 @@ Note that the index of user behavior tree for the general search unit can be pre
 In this section, we present our experiments in detail, including datasets, experimental setup, model comparison, and some corresponding analyses. The proposed search model is compared with several state-of-the-art work on two public datasets and one industrial dataset as shown in Table 1. Since SIM has been deployed in our online advertising system, we also conduct careful online A/B testing, with a comparison of several famous industry models.
 
 #### 5.1 Datasets
+**Table 1: Statistics of datasets used in this paper.**
+
+| Dataset        | Users     | Items<sup>a</sup>     | Categories | Instances   |
+|----------------|-----------|-----------------------|------------|-------------|
+| Amazon (Book)  | 75053     | 358367                | 1583       | 150016      |
+| Taobao         | 7956431   | 34196612              | 5597       | 7956431     |
+| Industrial     | 0.29 billion | 0.6 billion       | 100,000    | 12.2 billion|
+
+<sup>a</sup> For industrial dataset, items refer to be the advertisements.
+
+
 
 Model comparisons are conducted on two public datasets as well as an industrial dataset collected from the online display advertising system of Alibaba. Table 1 shows the statistics of all datasets.
 
@@ -123,6 +144,31 @@ We compare SIM with mainstream CTR prediction models as follows.
 - **Avg-Pooling Long DIN** To compare model performance on long-term user interest, we applied average-pooling operation on long-term behavior and concatenate the long-term embedding with other feature embeddings.
 
 #### 5.3 Results on Public Datasets
+**Table 2: Model performance (AUC) on public datasets**
+
+| Model                   | Taobao (mean ± std)      | Amazon (mean ± std)    |
+|-------------------------|--------------------------|-------------------------|
+| DIN                     | 0.9214 ± 0.00017         | 0.7276 ± 0.00051       |
+| Avg-Pooling Long DIN    | 0.9281 ± 0.00025         | 0.7280 ± 0.00012       |
+| MIMN                    | 0.9278 ± 0.00035         | 0.7396 ± 0.00037       |
+| SIM (soft)<sup>a</sup>  | 0.9416 ± 0.00049         | 0.7510 ± 0.00052       |
+| SIM (soft) with Timeinfo | **0.9501 ± 0.00017**    | -<sup>b</sup>          |
+
+<sup>a</sup> SIM (soft) is SIM with soft search without time interval embeddings  
+<sup>b</sup> We didn’t conduct the experiment on Amazon Dataset, as there are no timestamp features in it
+
+---
+
+**Table 3: Effectiveness evaluation of two-stage search architecture on longterm user interest modeling**
+
+| Operations                    | Taobao (mean ± std)      | Amazon (mean ± std)    |
+|-------------------------------|--------------------------|-------------------------|
+| Avg-Pooling without Search    | 0.9281 ± 0.00025         | 0.7280 ± 0.00012       |
+| Only First Stage (hard)       | 0.9330 ± 0.00031         | 0.7365 ± 0.00022       |
+| Only First Stage (soft)       | 0.9357 ± 0.00025         | 0.7342 ± 0.00012       |
+| SIM (hard)                    | 0.9332 ± 0.00008         | 0.7413 ± 0.00016       |
+| SIM (soft)                    | 0.9416 ± 0.00049         | 0.7510 ± 0.00052       |
+| SIM (soft) with Timeinfo      | **0.9501 ± 0.00017**     | -                      |
 
 Table 2 presents the results of all the compared models. Compared with DIN, the other models that take in long-term user behavior features perform much better. It demonstrates that long-term user behavior is helpful for CTR prediction task. SIM achieves significant improvement compared with MIMN because MIMN encodes all unfiltered user historical behaviors into a fixed-length memory which makes it hard to capture diverse long-term interest. SIM uses a two-stage search strategy to search relevant behaviors from a huge massive historical sequential behaviors and models the diverse long-term interest vary on different target items. Experiment results show that SIM outperforms all the other long-term interest model which strongly proves that the proposed two-stage search strategy is useful for long-term user interest modeling. Moreover, involving time embedding could achieve further improvement.
 
@@ -135,6 +181,19 @@ As shown in Table 3, all the methods with filter strategy extremely improve mode
 Involving time embedding achieves further improvement which demonstrates that the contribution of user behaviors in different period differs.
 
 #### 5.5 Results on Industrial Dataset
+
+**Table 4: Model performance (AUC) on industrial dataset**
+
+| Model                    | AUC     |
+|--------------------------|---------|
+| DIEN                     | 0.6452  |
+| MIMN                     | 0.6541  |
+| SIM (hard)               | 0.6604  |
+| SIM (soft)               | 0.6625  |
+| SIM (hard) with timeinfo<sup>a</sup> | 0.6624  |
+
+<sup>a</sup> The model has been deployed in our online serving system and is serving the main traffic now.
+
 
 We further conduct experiments on the dataset collected from the online display advertisement system of Alibaba. Table 4 shows the results. Compared with hard-search in the first stage, soft-search performs better. Meanwhile, we notice that there is just a slight gap between the two search strategies at the first stage. Applying the soft-search in the first stage cost more computation and storage resources. Because the nearest neighbors search method would be utilized in an online serving, while hard-search only need searching from a two-level index table which would be built in offline. Hence hard-search is more efficient and system friendly. Moreover, for two different search strategies, we do statistics on over 1 million samples and 100 thousand users with long-term historical behaviors from the industrial dataset. The results show that the user behaviors searched by hard-search strategy could cover 75% of that from the soft-search strategy. Finally, we choose the simpler hard-search strategy at the first stage for the trade-off between efficiency and performance. SIM improves MIMN with AUC gain of 0.008, which is significant for our business.
 
