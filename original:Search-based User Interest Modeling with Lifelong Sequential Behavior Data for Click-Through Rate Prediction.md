@@ -65,3 +65,129 @@ It should be noticed that distributions of long-term and short-term data are dif
 
 The behaviors representation Uᵣ and the target vector eₐ are then concatenated as the input of following MLP (Multi-Layer Perception). Note that if the user behavior grows to a certain extent, it is impossible to directly fed the whole user behaviors into the model. In that situation, one can randomly sample sets of sub-sequence from the long sequential user behaviors, which still follows the same distribution of the original one.
 
+### 3.3 Exact Search Unit
+
+In the first search stage, top-K related sub user behavior sequence B* w.r.t. the target item is selected from long-term user behaviors. To further model the user interest from the relevant behaviors, we introduce the Exact Search Unit which is an attention-based model taking B* as input.
+
+Considering that these selected user behaviors across a long time so that the contribution of user behaviors are different, we involve the sequence temporal property for each behavior. Specifically, the time intervals D = [Δ₁; Δ₂; ⋯; Δₖ] between target item and selected K user behaviors are used to provide temporal distance information. The B* and D are encoded as embedding E* = [e₁*; e₂*; ⋯; eₖ*] and Eₜ = [e₁ᵗ; e₂ᵗ; ⋯; eₖᵗ], respectively. eⱼ* and eⱼᵗ are concatenated as the final representation of the user behavior which is denoted as zⱼ = concat(eⱼ*, eⱼᵗ). We take advantage of multi-head attention to capture the diverse user interest:
+
+![image.png](https://s2.loli.net/2024/11/11/hm9IxcC3fdzKra8.jpg)
+
+where ![image.png](https://s2.loli.net/2024/11/11/mpC59KrPwUueQVH.jpg) is the i-th attention score and headᵢ is the i-th head in multi-head attention. Wᵦᵢ and Wₐᵢ are the i-th parameter of weight. The final user longtime diverse interest is represented as Uₗₜ = concat(head₁; ⋯; headq). It is then fed into the MLP for CTR prediction.
+
+Finally, the general search unit and exact search unit are trained simultaneously under Cross-entropy loss function.
+![image.png](https://s2.loli.net/2024/11/11/hl1McTCFLt7oRqE.jpg)
+where α and β are hyperparameters to control the loss weights. In our experiments, if GSU uses the soft-search model, both α and β are set as 1. GSU with the hard-search model is nonparametric and the α is set as 0.
+
+## 4 IMPLEMENTATION FOR ONLINE SERVING
+#### 4.1 Challenges of Online Serving with Lifelong User Behavior Data
+
+Industrial recommender or advertising systems need to process massive traffic requests in one second, which needs the CTR model to respond in real-time. Typically, the serving latency should be less than 30 milliseconds. Figure 2 briefly illustrates Real Time Prediction (RTP) system for CTR task in our online display advertising system.
+
+Taking lifelong user behavior into consideration, it’s even harder to make a long-term user interest model serving in real-time industrial system. The storage and latency constraints could be the bottleneck of the long-term user interest model [8]. Traffic would increase linearly as the length of user behavior sequence grows. Moreover, our system serves more than 1 million users per second at traffic peak. Hence, it is a great challenge to deploy a long-term model to the online system.
+
+#### 4.2 Search-based Interest Model for Online Serving System
+
+In section 3.2, we propose two kinds of general search unit, soft-search model and hard-search model. For both soft and hard search model, we conduct extensive offline experiments on industrial data, which is collected from the online display advertising system in Alibaba. We observe that the Top-K behavior generated from soft-search model is extremely similar to the result of hard-search model. In other words, most of the top-K behavior from soft-search generally belong to the category of the target item. It is a characteristic of data in our scenario. In e-commerce websites, items belonging to the same category are similar in most cases. Considering this, although soft-search model performs slightly better than hard-search model in offline experiments, refer to table 4 for details, after balancing the performance gain and resource consumption, we choose the hard-search model to deploy SIM in our advertising system.
+
+For hard-search model, the index which contains all the long sequential behavior data is a key component. We observe that behaviors can be achieved naturally by the category they belong to. Hence, we build an two-level structured index for each user, which we name as user behavior tree (UBT), as illustrated in Figure 3. Briefly speaking, UBT follows the Key-Key-Value data structure: the first key is user id, the second key is category, and the last values are the specific behavior items that belong to each category. UBT is implemented as distributed system, with size reaching up to 22 TB, and is flexible enough to provide high throughput query. Then, we take the category of target item as our hard-search query. After the general search unit, the length of user behaviors could be reduced from over ten thousands to hundreds. Thus, the storage pressure of lifelong behaviors in online system could be released. Figure 3 shows the new CTR prediction system with search-based interest model.
+
+Note that the index of user behavior tree for the general search unit can be pre-built offline. In that way, the response time for general search unit in online system could be really short and can be omitted comparing to the calculation of GSU. Besides, other user features can be computed in parallel.
+
+### 5 EXPERIMENTS
+
+In this section, we present our experiments in detail, including datasets, experimental setup, model comparison, and some corresponding analyses. The proposed search model is compared with several state-of-the-art work on two public datasets and one industrial dataset as shown in Table 1. Since SIM has been deployed in our online advertising system, we also conduct careful online A/B testing, with a comparison of several famous industry models.
+
+#### 5.1 Datasets
+
+Model comparisons are conducted on two public datasets as well as an industrial dataset collected from the online display advertising system of Alibaba. Table 1 shows the statistics of all datasets.
+
+- **Amazon Dataset** is composed of product reviews and metadata from Amazon. We use the Books subset of the Amazon dataset which contains 75053 users, 358367 items, and 1583 categories. For this dataset, we regard reviews as one kind of interaction behaviors and sort the reviews from one user by time. The maximum behavior sequence length of the Amazon book dataset is 100. We split the recent 10 user behaviors as short-term user sequential features and recent 90 user behaviors as long-term user sequential features. These pre-processing methods have been widely used in related works.
+
+- **Taobao Dataset** is a collection of user behaviors from Taobao’s recommender system. The dataset contains several types of user behaviors including click, purchase, etc. It contains user behavior sequences of about eight million users. We take the click behaviors for each user and sort them according to time in an attempt to construct the behavior sequence. The maximum behavior sequence length of the Taobao dataset is 500. We split the recent 100 user behaviors as short-term user sequential features and the recent 400 user behaviors as long-term user sequential features. The dataset will be published soon.
+
+- **Industrial Dataset** is collected from the online display advertising system of Alibaba. Samples are constructed from impression logs, with “click” or “not” as the label. The training set is composed of samples from the past 49 days and test set from the following day, a classic setting for industrial modeling. In this dataset, user behavior feature in each day’s sample contains historical behavior sequences from the preceding 180 days as long-term behavior features and that from the preceding 14 days as short-term behavior features. Over 30% of samples contain sequential behavior data with a length of more than 10000. Moreover, the maximum length of behavior sequence reaches up to 54000, which is 54x larger than that in MIMN [8].
+
+
+#### 5.2 Competitors and experiment setup
+
+We compare SIM with mainstream CTR prediction models as follows.
+
+- **DIN** [20] is an early work for user behavior modeling which proposes to soft-search user behaviors w.r.t. candidates. Compared with other long-term user interest model, DIN only takes short-term user behaviors as input.
+
+- **Avg-Pooling Long DIN** To compare model performance on long-term user interest, we applied average-pooling operation on long-term behavior and concatenate the long-term embedding with other feature embeddings.
+
+#### 5.3 Results on Public Datasets
+
+Table 2 presents the results of all the compared models. Compared with DIN, the other models that take in long-term user behavior features perform much better. It demonstrates that long-term user behavior is helpful for CTR prediction task. SIM achieves significant improvement compared with MIMN because MIMN encodes all unfiltered user historical behaviors into a fixed-length memory which makes it hard to capture diverse long-term interest. SIM uses a two-stage search strategy to search relevant behaviors from a huge massive historical sequential behaviors and models the diverse long-term interest vary on different target items. Experiment results show that SIM outperforms all the other long-term interest model which strongly proves that the proposed two-stage search strategy is useful for long-term user interest modeling. Moreover, involving time embedding could achieve further improvement.
+
+#### 5.4 Ablation Study
+
+**Effectiveness of the two-stage search.** As mentioned above, the proposed search interest model uses a two-stage search strategy. The first stage follows a general search strategy to filter out relevant historical behaviors with the target item. The second stage conducts an attention-based exact search on behaviors from the first stage to accurately capture users’ diverse long-term interest on target items. In this section, we will evaluate the effectiveness of the proposed two-stage search architecture by experiments with different operations applied to long-term historical behavior. As shown in Table 3, **Avg-Pooling without Search** is simply using average pooling to integrate long-term behavior embedding without any filters, same as avg-pooling Long DIN. **Only First Stage (hard)** is applying hard-search on long-term historical behaviors in the first stage and integrate filtered embedding by average pooling to a fixed size vector as the input of MLP. **Only First Stage (soft)** is almost the same as Only First Stage (hard) except applying parametric soft-search rather than hard-search at the first stage. In the third experiment, we eliminate calculate the inner product similarity score between a target item and long-term user behaviors based on pre-trained embedding vectors. The soft-search is conducted by selecting the top 50 relevant behaviors according to the similarity score. And the last three experiments are the proposed search model with two-stage search architecture.
+
+As shown in Table 3, all the methods with filter strategy extremely improve model performance compared with simply average pooling the embedding. It indicates that there indeed exists massive noise in original long-term behavior sequence which may undermine long-term user interest learning. Compared with models with only one stage search, The proposed search model with a two-stage search strategy makes further progress by introducing an attention-based search on the second stage. It indicates that precisely modeling users’ diverse long-term interest on target items is helpful on CTR prediction tasks. And after the first stage search, the filtered behavior sequences usually are much shorter than the original sequences. The attention operations wouldn’t burden the online serving RTP system in real-time.
+
+Involving time embedding achieves further improvement which demonstrates that the contribution of user behaviors in different period differs.
+
+#### 5.5 Results on Industrial Dataset
+
+We further conduct experiments on the dataset collected from the online display advertisement system of Alibaba. Table 4 shows the results. Compared with hard-search in the first stage, soft-search performs better. Meanwhile, we notice that there is just a slight gap between the two search strategies at the first stage. Applying the soft-search in the first stage cost more computation and storage resources. Because the nearest neighbors search method would be utilized in an online serving, while hard-search only need searching from a two-level index table which would be built in offline. Hence hard-search is more efficient and system friendly. Moreover, for two different search strategies, we do statistics on over 1 million samples and 100 thousand users with long-term historical behaviors from the industrial dataset. The results show that the user behaviors searched by hard-search strategy could cover 75% of that from the soft-search strategy. Finally, we choose the simpler hard-search strategy at the first stage for the trade-off between efficiency and performance. SIM improves MIMN with AUC gain of 0.008, which is significant for our business.
+
+**Online A/B Testing.** Since 2019, we have deployed the proposed solution in the display advertising system in Alibaba. From 2020-01-07 to 2020-02-07, we conduct a strict online A/B testing experiment to validate the proposed SIM model. Compared to MIMN (our last product model), SIM achieves great gain in Alibaba display advertising scene, which shows in table 5. Now, SIM has been deployed online and serves the main scene traffic every day, which contributes significant business revenue growth.
+
+**Rethinking Search Model.** We make great efforts on users’ long-term interest modeling and the proposed SIM achieves good performance on both offline and online evaluation. But does SIM perform better as a result of precise long-term interest modeling? And will SIM prefer to recommend items relevant to people’s long-term interest? To answer the two questions, we formulate another metric. **Days till Last Same Category Behavior** (dₐcₐₜₑgₒᵣy) of a click sample is defined as the days between the users' past behavior on items with the same category as the click sample until the click event happens. For example, user u₁ click an item i₁ with category c₁ and u₁ clicked an item j which has the same category with i₁ 5 days ago, and that u₁’s past behavior on c₁. If the click event is denoted as s₃, then the Days till Last Same Category Behavior of sample s₃ will be 5 (dₐcₐₜₑgₒᵣy = 5). Moreover, if user u₁ has never behaviors on category c₁, we will set dₐcₐₜₑgₒᵣy as -1. For a specific model, dₐcₐₜₑgₒᵣy can be used to evaluate the model selection preference on long-term or short-term interest.
+
+After online A/B Testing, we analyze the click samples from SIM and DIEN, which is the last version of the short-term CTR prediction model, based on the proposed metric dₐcₐₜₑgₒᵣy. The clicks distribution on dₐcₐₜₑgₒᵣy is shown in Figure 4. It can be found that there is almost no difference between the two models on short-term part (dₐcₐₜₑgₒᵣy < 14) because both SIM and DIEN have short-term user behavior features in the last 14 days. While on the long-term part SIM accounts larger proportion. Moreover, we static the average of dₐcₐₜₑgₒᵣy and the probability of user has historical category behaviors on target item (p(dₐcₐₜₑgₒᵣy > -1)) on the industrial dataset as shown in Table 6. The statistics result on the industrial dataset proves that the improvement of SIM indeed as a result of better longterm interest modeling and compared with DIEN, SIM prefers to recommend items relevant to people's long-term behaviors.
+
+
+**Practical Experience For Deployment.** Here we introduce our hands-on experiments of implementing SIM in an online serving system. High traffic in Alibaba is well-known, which serves more than 1 million users per second at a traffic peak. Moreover, for each user, the RTP system needs to calculate the predicted CTR of hundreds of candidate items. We build a two-stage index for the whole user behavior data offline, and it will be updated daily. The first stage is the user id. In the second stage, the lifelong behavior data of one user is indexed by the categories, which this user has interacted with. Although the number of candidate items is hundreds, the number of categories of these items is usually less than 20. Meanwhile, the length of sub behavior sequence from GSU for each category is truncated by 200 (the original length are usually less than 150). In that way, the traffic of each request from users is limited and acceptable. Besides, we optimize the calculation of multi-head attention in ESU by deep kernel fusion.
+
+Our real-time CTR prediction system performance of latency w.r.t. throughout with DIEN, MIMN, and SIM show in Figure 5. It is worth noticing that the maximum length of user behavior that MIMN can handle is 1000 and the performance showed is based on the truncated behavior data. While the length of user behavior in SIM is not truncated and can scale up to 54000, pushing the maximum length up to 54x. SIM serving with over ten thousand behavior only increases latency by 5ms compared to MIMN serving with truncated user behavior.
+
+### 6 CONCLUSIONS
+
+In this paper, we focus on exploiting over ten thousands of sequential user behavior data in real industrial. Search-based interest model is proposed to capture the diverse user long-term interest with target item. In the first stage, we propose a General Search Unit to reduce the ten thousands of behaviors to hundreds. And in the second stage, an Exact Search Unit utilizes the hundreds relevant behaviors to model the precise user interest. We implement SIM in the display advertising system of Alibaba. SIM brings significant business improvement and is serving the main traffic.
+
+SIM introduces much more user behavior data than the previous methods and the experiment results show that SIM pays more attention on the long-term interest. But the search unit still shares the same formula and parameters among all users. In the future, we will try to build user-specific model to organize life long behavior data of each user with respect to personal conscious. In that way, each user will own their individual model, which keeps modeling the evolving interest of the user.
+
+### REFERENCES
+
+[1] Heng-Tze Cheng, Levent Koc, Jeremiah Harmsen, Tal Shaked, Tushar Chandra, Hrishi Aradhye, Glen Anderson, Greg Corrado, Wei Chai, Mustafa Ispir, et al. 2016. Wide & deep learning for recommender systems. In *Proceedings of the 1st Workshop on Deep Learning for Recommender Systems.* ACM, 7–10.
+
+[2] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep neural networks for youtube recommendations. In *Proceedings of the 10th ACM Conference on Recommender Systems.* ACM, 191–198.
+
+[3] Yufei Feng, Fuyu Lv, Weichen Shen, Menghan Wang, Fei Sun, Yu Zhu, and Keping Yang. 2019. Deep session interest network for click-through rate prediction. *arXiv preprint arXiv:1905.06482* (2019).
+
+[4] Huifeng Guo, Ruiming Tang, Yunming Ye, Zhenguo Li, and Xiuqiang He. 2017. Deepfm: a factorization-machine based neural network for ctr prediction. In *Proceedings of the 26th International Joint Conference on Artificial Intelligence.* Melbourne, Australia., 2782–2788.
+
+[5] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. *arXiv preprint arXiv:1511.06939* (2015).
+
+[6] Chao Li, Zhiyuan Liu, Mengmeng Wu, Yuchi Xu, Huan Zhao, Pipei Huang, Guoliang Kang, Qiwei Chen, Wei Li, and Dik Lun Lee. 2019. Multi-interest network with dynamic routing for recommendation at Tmall. In *Proceedings of the 28th ACM International Conference on Information and Knowledge Management.*, 2615–2623.
+
+[7] Jianxun Lian, Xiaohuan Zhou, Fuzheng Zhang, Zhongxia Chen, Xing Xie, and Guangzhong Sun. 2018. xDeepFM: Combining Explicit and Implicit Feature Interactions for Recommender Systems. In *Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining.* London, United Kingdom.
+
+[8] Qi Pi, Weijie Bian, Guorui Zhou, Xiaoqiang Zhu, and Kun Gai. 2019. Practice on Long Sequential User Behavior Modeling for Click-through Rate Prediction. In *Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining.* ACM, 1059–1068.
+
+[9] Yanru Qu, Han Cai, Kan Ren, Weinan Zhang, Yong Yu, Ying Wen, and Jun Wang. 2016. Product-Based Neural Networks for User Response Prediction. (2016), 1149–1154.
+
+[10] Kan Ren, Jiarui Qin, Yuchen Fang, Weinan Zhang, Lei Zheng, Weijie Bian, Guorui Zhou, Jian Xu, Yong Yu, Xiaoqiang Zhu, et al. 2019. Lifelong Sequential Modeling with Personalized Memorization for User Response Prediction. In *Proceedings of the 42nd International ACM SIGIR Conference on Research and Development in Information Retrieval.*, 565–574.
+
+[11] Ying Shan, T Ryan Hoens, Jian Jiao, Haijung Wang, Dong Yu, and JC Mao. [n.d.]. Deep Crossing: Web-scale modeling without manually crafted combinatorial features.
+
+[12] Anshumali Shrivastava and Ping Li. 2014. Asymmetric LSH (ALSH) for sublinear time maximum inner product search (MIPS). In *Advances in Neural Information Processing Systems.*, 2321–2329.
+
+[13] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder representations from transformer. In *Proceedings of the 28th ACM International Conference on Information and Knowledge Management.*, 1441–1450.
+
+[14] Jiaxi Tang and Ke Wang. 2018. Personalized top-n sequential recommendation via convolutional sequence embedding. In *Proceedings of the Eleventh ACM International Conference on Web Search and Data Mining.*, 565–573.
+
+[15] Ruoxi Wang, Bin Fu, Gang Fu, and Mingliang Wang. 2017. Deep & Cross Network for Ad Click Predictions. (2017), 12.
+
+[16] Zeping Yu, Jianxun Lian, Ahmad Mahmood, Gongshen Liu, and Xing Xie. 2019. Adaptive user modeling with long and short-term preferences for personalized recommendation. In *Proceedings of the 28th International Joint Conference on Artificial Intelligence.* AAAI Press, 4213–4219.
+
+[17] Fajie Yuan, Alexandros Karatzoglou, Ioannis Arapakis, Joemon M Jose, and Xiangnan He. 2019. A simple convolutional generative network for next item recommendation. In *Proceedings of the Twelfth ACM International Conference on Web Search and Data Mining.*, 582–590.
+
+[18] Shuangfei Zhai, Keng-hao Chang, Ruofei Zhang, and Zhongfei Mark Zhang. 2016. Deepintent: Learning attentions for online advertising with recurrent neural networks. In *Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining.* ACM, 1295–1304.
+
+[19] Guorui Zhou, Na Mou, Ying Fan, Qi Pi, Weijie Bian, Chang Zhou, Xiaoqiang Zhu, and Kun Gai. 2019. Deep interest evolution network for click-through rate prediction. In *Proceedings of the 33nd AAAI Conference on Artificial Intelligence.* Honolulu, USA.
+
+[20] Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep interest network for click-through rate prediction. In *Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining.* ACM, 1059–1068.
