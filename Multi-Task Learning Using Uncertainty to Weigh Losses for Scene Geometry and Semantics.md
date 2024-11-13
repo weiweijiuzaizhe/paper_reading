@@ -120,6 +120,9 @@ $$
 $$
 
 
+
+
+
 where again we write $\mathcal{L}_1(W) = \|y_1 - f^W(x)\|^2$ for the Euclidean loss of $y_1$, and $\mathcal{L}_2(W)$ for the cross entropy loss of $y_2$ (with $f^W(x)$ not scaled), and optimize with respect to $W$ as well as $\sigma_1, \sigma_2$. In the last transition, we introduced the explicit simplifying assumption: $\frac{1}{\sigma_2} \sum_{c'} \exp \left( \frac{1}{\sigma_2^2} f_{c'}^W(x) \right) \approx \left( \sum_{c'} \exp \left( f_{c'}^W(x) \right) \right)^{\frac{1}{\sigma_2^2}}$
 
 which becomes an equality when $\sigma_2 \rightarrow 1$. This has the advantage of simplifying the optimization objective, as well as empirically improving results.
