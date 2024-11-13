@@ -92,7 +92,7 @@ We interpret minimizing this last objective with respect to \( \sigma_1 \) and \
 This construction can be trivially extended to multiple regression outputs. However, the extension to classification likelihoods is more interesting. We adapt the classification likelihood to squash a scaled version of the model output through a softmax function:
 
 $$
-p(y\mid f^{W}(x),\sigma)=\operatorname{Softmax}\left(\frac{1}{\sigma^2} f^{W}(x)\right)\qquad(8)
+p(y \mid f^{W}(x), \sigma) = \text{Softmax}\left(\frac{1}{\sigma^2} f^{W}(x)\right) \quad (8)
 $$
 
 with a positive scalar $\sigma$. This can be interpreted as a Boltzmann distribution (also called Gibbs distribution) where the input is scaled by $\sigma^2$ (often referred to as temperature). This scalar is either fixed or can be learnt, where the parameter's magnitude determines how 'uniform' (flat) the discrete distribution is. This relates to its uncertainty, as measured in entropy. The log likelihood for this output can then be written as
