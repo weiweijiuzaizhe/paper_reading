@@ -38,7 +38,7 @@ This is the dominant approach used by prior work[39, 38, 30, 41], for example fo
 
 More concretely, let us consider a network which learns to predict pixel-wise depth and semantic class from an input image. In Figure 2 the two boundaries of each plot show models trained on individual tasks, with the curves showing performance for varying weights $w_i$ for each task. We observe that at some optimal weighting, the joint network performs better than separate networks trained on each task individually (performance of the model in individual tasks is seen at both edges of the plot: $w=0$ and $w=1$). At nearby values to the optimal weight the network performs worse on one of the tasks. However, searching for these optimal weightings is expensive and increasingly difficult with large models with numerous tasks. Figure 2 also shows a similar result for two regression tasks; instance segmentation and depth regression. We next show how to learn optimal task weightings using ideas from probabilistic modelling.
 
-### 3.1. Homoscedastic Uncertainty as Task-Dependent Uncertainty
+#### 3.1. Homoscedastic Uncertainty as Task-Dependent Uncertainty
 
 In Bayesian modeling, there are two main types of uncertainty one can model[24].
 
@@ -52,7 +52,7 @@ Aleatoric uncertainty can again be divided into two sub-categories.
 
 In a multi-task setting, we show that the task uncertainty captures the relative confidence between tasks, reflecting the uncertainty inherent to the regression or classification task. It will also depend on the task's representation or unit of measure. We propose that we can use homoscedastic uncertainty as a basis for weighting losses in a multi-task learning problem.
 
-### 3.2. Multi-task Likelihoods
+#### 3.2. Multi-task Likelihoods
 
 In this section, we derive a multi-task loss function based on maximizing the Gaussian likelihood with homoscedastic uncertainty. Let \( f^W(x) \) be the output of a neural network with weights \( W \) on input \( x \). We define the following probabilistic model. For regression tasks, we define our likelihood as a Gaussian with mean given by the model output:
 
@@ -155,10 +155,10 @@ The purpose of the encoder is to learn a deep mapping to produce rich, contextua
 
 We then split the network into separate decoders (with separate weights) for each task. The purpose of the decoder is to learn a mapping from the shared features to an output. Each decoder consists of a 3 × 3 convolutional layer with output feature size 256, followed by a 1 × 1 layer regressing the task’s output. Further architectural details are described in Appendix A.
 
-### Semantic Segmentation
+##### Semantic Segmentation
 We use the cross-entropy loss to learn pixel-wise class probabilities, averaging the loss over the pixels with semantic labels in each mini-batch.
 
-### Instance Segmentation
+##### Instance Segmentation
 An intuitive method for defining which instance a pixel belongs to is an association to the instance’s centroid. We use a regression approach for instance segmentation [29]. This approach is inspired by [28] which identifies instances using Hough votes from object parts. In this work, we extend this idea by using votes from individual pixels using deep learning. We learn an instance vector, $\hat{x}_n$, for each pixel coordinate, $c_n$, which points to the centroid of the pixel’s instance, $i_n$, such that
 
 $$
@@ -194,7 +194,7 @@ We demonstrate the efficacy of our method on CityScapes [13], a large dataset fo
 
 Further training details, and optimisation hyperparameters, are provided in Appendix A.
 
-### 5.1. Model Analysis
+#### 5.1. Model Analysis
 
 In Table 1 we compare individual models to multi-task learning models using a naive weighted loss or the task uncertainty weighting we propose in this paper. To reduce the computational burden, we train each model at a reduced resolution of 128 × 256 pixels, over 50,000 iterations. When we downsample the data by a factor of four, we also need to scale the disparity labels accordingly. Table 1 clearly illustrates the benefit of multi-task learning, which obtains significantly better performing results than individual task models. For example, using our method we improve classification results from 59.4% to 63.4%.
 
