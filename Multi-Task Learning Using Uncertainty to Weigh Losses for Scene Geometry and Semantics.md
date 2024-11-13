@@ -87,7 +87,8 @@ $$= \frac{1}{2\sigma_1^2} \mathcal{L}_1(W) + \frac{1}{2\sigma_2^2} \mathcal{L}_2
 
 Where we wrote $\mathcal{L}_1(W) = \|y_1 - f^W(x)\|^2$  for the loss of the first output variable, and similarly for  $\mathcal{L}_2(W)$
 
-We interpret minimizing this last objective with respect to \( \sigma_1 \) and \( \sigma_2 \) as learning the relative weight of the losses \( \mathcal{L}_1(W) \) and \( \mathcal{L}_2(W) \) adaptively, based on the data. As \( \sigma_1 \) (the noise parameter for the variable \( y_1 \)) increases, we have that the weight of \( \mathcal{L}_1(W) \) decreases. On the other hand, as the noise decreases, we have that the weight of the respective objective increases. The noise is discouraged from increasing too much (effectively ignoring the data) by the last term in the objective, which acts as a regularizer for the noise terms.
+We interpret minimizing this last objective with respect to $\sigma_1$ and $\sigma_2$ as learning the relative weight of the losses $L_1(W)$ and $L_2(W)$ adaptively, based on the data. As $\sigma_1$ (the noise parameter for the variable $y_1$) increases, we have that the weight of $L_1(W)$ decreases. On the other hand, as the noise decreases, we have that the weight of the respective objective increases. The noise is discouraged from increasing too much (effectively ignoring the data) by the last term in the objective, which acts as a regularizer for the noise terms.
+
 
 
 This construction can be trivially extended to multiple regression outputs. However, the extension to classification likelihoods is more interesting. We adapt the classification likelihood to squash a scaled version of the model output through a softmax function:
