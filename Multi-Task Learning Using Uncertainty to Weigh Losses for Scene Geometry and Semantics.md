@@ -109,23 +109,37 @@ with $f_{c}^{W}(x)$ the c'th element of the vector $f^{W}(x)$.
 Next, assume that a model's multiple outputs are composed of a continuous output $y_1$ and a discrete output $y_{2}$, modelled with a Gaussian likelihood and a softmax likelihood, respectively. Like before, the joint loss, $\mathcal{L}\left(W,\sigma_{1},\sigma_{2}\right)$, is given as:
 
 $$
-\begin{align*}
-&= -\log p\left(y_{1}, y_{2}=c\mid f^{W}(x)\right) \\
-&= -\log\mathcal{N}\left(y_{1}; f^{W}(x),\sigma_{1}^{2}\right)\cdot\text{Softmax}\left(y_{2}=c; f^{W}(x),\sigma_{2}\right) \\
-&= \frac{1}{2\sigma_{1}^{2}}\left\|y_{1}-f^{W}(x)\right\|^{2}+\log\sigma_{1}-\log p\left(y_{2}=c\mid f^{W}(x),\sigma_{2}\right) \\
-&= \frac{1}{2\sigma_{1}^{2}}\mathcal{L}_{1}(W)+\frac{1}{\sigma_{2}^{2}}\mathcal{L}_{2}(W)+\log\sigma_{1} \\
-&\quad + \log\frac{\sum_{c^{\prime}}\exp\left(\frac{1}{\sigma_{2}^{2}} f_{c^{\prime}}^{W}(x)\right)}{\left(\sum_{c^{\prime}}\exp\left(f_{c^{\prime}}^{W}(x)\right)\right)^{\frac{1}{\sigma_{2}^{2}}}} \\
-&\approx \frac{1}{2\sigma_{1}^{2}}\mathcal{L}_{1}(W)+\frac{1}{\sigma_{2}^{2}}\mathcal{L}_{2}(W)+\log\sigma_{1}+\log\sigma_{2},
-\end{align*}
+\mathcal{L}(W, \sigma_1, \sigma_2) = -\log p(y_1, y_2 = c \mid f^{W}(x)) 
 $$
 
+$$
+= -\log\mathcal{N}(y_1; f^{W}(x), \sigma_1^2) \cdot \text{Softmax}(y_2 = c; f^{W}(x), \sigma_2) 
+$$
 
+$$
+= \frac{1}{2\sigma_1^2} \left|y_1 - f^{W}(x)\right|^2 + \log \sigma_1 - \log p(y_2 = c \mid f^{W}(x), \sigma_2)
+$$
 
+$$
+= \frac{1}{2\sigma_1^2} \mathcal{L}_1(W) + \frac{1}{\sigma_2^2} \mathcal{L}_2(W) + \log \sigma_1 
+$$
 
+$$
+\quad + \log \frac{\sum_{c'} \exp \left( \frac{1}{\sigma_2^2} f_{c'}^W(x) \right)}{\left( \sum_{c'} \exp \left( f_{c'}^W(x) \right) \right)^{\frac{1}{\sigma_2^2}}}
+$$
 
-where again we write $\mathcal{L}_1(W) = \|y_1 - f^W(x)\|^2$ for the Euclidean loss of $y_1$, and $\mathcal{L}_2(W)$ for the cross entropy loss of $y_2$ (with $f^W(x)$ not scaled), and optimize with respect to $W$ as well as $\sigma_1, \sigma_2$. In the last transition, we introduced the explicit simplifying assumption: $\frac{1}{\sigma_2} \sum_{c'} \exp \left( \frac{1}{\sigma_2^2} f_{c'}^W(x) \right) \approx \left( \sum_{c'} \exp \left( f_{c'}^W(x) \right) \right)^{\frac{1}{\sigma_2^2}}$
+$$
+\approx \frac{1}{2\sigma_1^2} \mathcal{L}_1(W) + \frac{1}{\sigma_2^2} \mathcal{L}_2(W) + \log \sigma_1 + \log \sigma_2
+$$
+
+where again we write $\mathcal{L}_1(W) = \|y_1 - f^W(x)\|^2$ for the Euclidean loss of $y_1$, and $\mathcal{L}_2(W)$ for the cross entropy loss of $y_2$ (with $f^W(x)$ not scaled), and optimize with respect to $W$ as well as $\sigma_1, \sigma_2$. In the last transition, we introduced the explicit simplifying assumption: 
+
+$$
+\frac{1}{\sigma_2} \sum_{c'} \exp \left( \frac{1}{\sigma_2^2} f_{c'}^W(x) \right) \approx \left( \sum_{c'} \exp \left( f_{c'}^W(x) \right) \right)^{\frac{1}{\sigma_2^2}}
+$$
 
 which becomes an equality when $\sigma_2 \rightarrow 1$. This has the advantage of simplifying the optimization objective, as well as empirically improving results.
+
 
 This last objective can be seen as learning the relative weights of the losses for each output. Large scale values $\sigma_2$ will decrease the contribution of $\mathcal{L}_2(W)$, whereas small scale $\sigma_2$ will increase its contribution. The scale is regulated by the last term in the equation. The objective is penalized when setting $\sigma_2$ too large.
 
@@ -139,22 +153,38 @@ To understand semantics and geometry, we first propose an architecture which can
 
 The purpose of the encoder is to learn a deep mapping to produce rich, contextual features, using domain knowledge from a number of related tasks. Our encoder is based on DeepLabV3 [10], which is a state-of-the-art semantic segmentation framework. We use ResNet101 [20] as the base feature encoder, followed by an Atrous Spatial Pyramid Pooling (ASPP) module [10] to increase contextual awareness. We apply dilated convolutions in this encoder, such that the resulting feature map is sub-sampled by a factor of 8 compared to the input image dimensions.
 
-We then split the network into separate decoders **(with separate weights)** for each task. The purpose of the decoder is to learn a mapping from the shared features to an output. Each decoder consists of a 3 × 3 convolutional layer with output feature size 256, followed by a 1 × 1 layer regressing the task’s output. Further architectural details are described in **Appendix A**.
+We then split the network into separate decoders (with separate weights) for each task. The purpose of the decoder is to learn a mapping from the shared features to an output. Each decoder consists of a 3 × 3 convolutional layer with output feature size 256, followed by a 1 × 1 layer regressing the task’s output. Further architectural details are described in Appendix A.
 
-**Semantic Segmentation.** We use the cross-entropy loss to learn pixel-wise class probabilities, averaging the loss over the pixels with semantic labels in each mini-batch.
+### Semantic Segmentation
+We use the cross-entropy loss to learn pixel-wise class probabilities, averaging the loss over the pixels with semantic labels in each mini-batch.
 
-**Instance Segmentation.** An intuitive method for defining which instance a pixel belongs to is an association to the instance’s centroid. We use a regression approach for instance segmentation **[29]**. This approach is inspired by **[28]** which identifies instances using Hough votes from object parts. In this work we extend this idea by using votes from individual pixels using deep learning. We learn an instance vector, $\hat{x}_{n}$, for each pixel coordinate, $c_{n}$, which points to the centroid of the pixel’s instance, $i_{n}$, such that $i_{n} = \hat{x}_{n} + c_{n}$. We train this regression with an $L_{1}$ loss using ground truth labels $x_{n}$, averaged over all labelled pixels, $N_{I}$, in a mini-batch: $\mathcal{L}_{\text{Instance}} = \frac{1}{|N_{I}|} \sum_{N_{I}} \|x_{n} - \hat{x}_{n}\|_{1}$.
-
-**Figure 3** details the representation we use for instance segmentation. **Figure 3(a)** shows the input image and a mask of the pixels which are of an instance class (at test time inferred from the predicted semantic segmentation). **Figure 3(b)** and **Figure  3(c)** show the ground truth and predicted instance vectors for both \(x\) and \(y\) coordinates. We then cluster these votes using OPTICS **[2]**, resulting in the predicted instance segmentation output in **Figure 3(d)**.
-
-One of the most difficult cases for instance segmentation algorithms to handle is when the instance mask is split due to occlusion. **Figure 4** shows that our method can handle these situations, by allowing pixels to vote for their instance centroid with geometry. Methods which rely on watershed approaches[4], or instance edge identification approaches fail in these scenarios.
-
-To obtain segmentations for each instance, we now need to estimate the instance centres, $\hat{i}_{n}$. We propose to consider the estimated instance vectors, $\hat{x}_{n}$, as votes in a Hough parameter space and use a clustering algorithm to identify these instance centres. **OPTICS**[2], is an efficient density based clustering algorithm. It is able to identify an unknown number of multi-scale clusters with varying density from a given set of samples. We chose **OPTICS** for two reasons. Crucially, it does not assume knowledge of the number of clusters like algorithms such as k-means[33]. Secondly, it does not assume a canonical instance size or density like discretised binning approaches[12]. Using **OPTICS**, we cluster the points $c_{n}+\hat{x}_{n}$ into a number of estimated instances, $i$. We can then assign each pixel, $p_{n}$ to the instance closest to its estimated instance vector, $c_{n}+\hat{x}_{n}$.
-
-**Depth Regression.** We train with supervised labels using pixel-wise metric inverse depth using a $L_{1}$ loss function:
+### Instance Segmentation
+An intuitive method for defining which instance a pixel belongs to is an association to the instance’s centroid. We use a regression approach for instance segmentation [29]. This approach is inspired by [28] which identifies instances using Hough votes from object parts. In this work, we extend this idea by using votes from individual pixels using deep learning. We learn an instance vector, $\hat{x}_n$, for each pixel coordinate, $c_n$, which points to the centroid of the pixel’s instance, $i_n$, such that
 
 $$
-\mathcal{L}_{\text{Depth}}=\frac{1}{\left|N_{D}\right|}\sum_{N_{D}}\left\|d_{n}-\hat{d}_{n}\right\|_{1}
+i_n = \hat{x}_n + c_n
 $$
 
-Our architecture estimates inverse depth, \(\hat{d}_{n}\), because it can represent points at infinite distance (such as sky). We can obtain inverse depth labels, \(d_{n}\), from a RGBD sensor or stereo imagery. Pixels which do not have an inverse depth label are ignored in the loss.
+We train this regression with an $L_1$ loss using ground truth labels $x_n$, averaged over all labelled pixels, $N_I$, in a mini-batch:
+
+$$
+L_{\text{Instance}} = \frac{1}{|N_I|} \sum_{n \in N_I} \left| x_n - \hat{x}_n \right|_1
+$$
+
+
+**Figure 3** details the representation we use for instance segmentation. **Figure 3(a)** shows the input image and a mask of the pixels which are of an instance class (at test time inferred from the predicted semantic segmentation). **Figure 3(b)** and **Figure 3(c)** show the ground truth and predicted instance vectors for both $x$ and $y$ coordinates. We then cluster these votes using OPTICS [2], resulting in the predicted instance segmentation output in **Figure 3(d)**.
+
+One of the most difficult cases for instance segmentation algorithms to handle is when the instance mask is split due to occlusion. **Figure 4** shows that our method can handle these situations, by allowing pixels to vote for their instance centroid with geometry. Methods which rely on watershed approaches [4], or instance edge identification approaches fail in these scenarios.
+
+To obtain segmentations for each instance, we now need to estimate the instance centres, $\hat{i}_n$. We propose to consider the estimated instance vectors, $\hat{x}_n$, as votes in a Hough parameter space and use a clustering algorithm to identify these instance centres. **OPTICS** [2] is an efficient density-based clustering algorithm. It is able to identify an unknown number of multi-scale clusters with varying density from a given set of samples. We chose **OPTICS** for two reasons. Crucially, it does not assume knowledge of the number of clusters like algorithms such as k-means [33]. Secondly, it does not assume a canonical instance size or density like discretized binning approaches [12]. Using **OPTICS**, we cluster the points $c_n + \hat{x}_n$ into a number of estimated instances, $i$. We can then assign each pixel, $p_n$, to the instance closest to its estimated instance vector, $c_n + \hat{x}_n$.
+
+### Depth Regression
+We train with supervised labels using pixel-wise metric inverse depth using an $L_1$ loss function:
+
+
+$$
+L_{\text{Depth}} = \frac{1}{|N_D|} \sum_{n \in N_D} | d_n - \hat{d}_n |_1
+$$
+
+Our architecture estimates inverse depth, $\hat{d}_n$, because it can represent points at infinite distance (such as sky). We can obtain inverse depth labels, $d_n$, from an RGBD sensor or stereo imagery. Pixels which do not have an inverse depth label are ignored in the loss.
+
