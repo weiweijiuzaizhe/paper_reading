@@ -17,7 +17,7 @@ Multi-task learning aims to improve learning efficiency and prediction accuracy 
 
 We explore multi-task learning within the setting of visual scene understanding in computer vision. Scene understanding algorithms must understand both the geometry and semantics of the scene at the same time. This forms an interesting multi-task learning problem because scene understanding involves joint learning of various regression and classification tasks with different units and scales. Multi-task learning of visual scene understanding is of crucial importance in systems where long computation run-time is prohibitive, such as the ones used in robotics. Combining all tasks into a single model reduces computation and allows...
 
-#### 2. Related Work
+### 2. Related Work
 
 Multi-task learning aims to improve learning efficiency and prediction accuracy for each task, when compared to training a separate model for each task[40,5]. It can be considered an approach to inductive knowledge transfer which improves generalisation by sharing the domain information between complimentary tasks. It does this by using a shared representation to learn multiple tasks - what is learned from one task can help learn other tasks[7].
 
@@ -26,7 +26,7 @@ Fine-tuning[1, 36] is a basic example of multi-task learning, where we can lever
 In computer vision there are many examples of methods for multi-task learning. Many focus on semantic tasks, such as classification and semantic segmentation[30] or classification and detection[38]. MultiNet[39] proposes an architecture for detection, classification and semantic segmentation. CrossStitch networks[34] explore methods to combine multi-task neural activations. Uhrig et al.[41] learn semantic and instance segmentations under a classification setting. Multi-task deep learning has also been used for geometry and regression tasks. [15] show how to learn semantic segmentation, depth and surface normals. PoseNet[25] is a model which learns camera position and orientation. UberNet[27] learns a number of different regression and classification tasks under a single architecture. In this work we are the first to propose a method for jointly learning depth regression, semantic and instance segmentation.
 
 Like the model of [15], our model learns both semantic and geometry representations, which is important for scene understanding. However, our model learns the much harder task of instance segmentation which requires knowledge of both semantics and geometry. This is because our model must determine the class and spatial relationship for each pixel in each object for instance segmentation.
-## 3. Multi Task Learning with Homoscedastic Uncertainty
+### 3. Multi Task Learning with Homoscedastic Uncertainty
 
 Multi-task learning concerns the problem of optimising a model with respect to multiple objectives. It is prevalent in many deep learning problems. The naive approach to combining multi objective losses would be to simply perform a weighted linear sum of the losses for each individual task:
 
@@ -147,7 +147,7 @@ This construction can be trivially extended to arbitrary combinations of discret
 
 In practice, we train the network to predict the log variance, $s := \log \sigma^2$. This is because it is more numerically stable than regressing the variance, $\sigma^2$, as the loss avoids any division by zero. The exponential mapping also allows us to regress unconstrained scalar values, where $\exp(-s)$ is resolved to the positive domain giving valid values for variance.
 
-## 4. Scene Understanding Model
+### 4. Scene Understanding Model
 
 To understand semantics and geometry, we first propose an architecture which can learn regression and classification outputs, at a pixel level. Our architecture is a deep convolutional encoder-decoder network [3]. Our model consists of a number of convolutional encoders which produce a shared representation, followed by a corresponding number of task-specific convolutional decoders. A high-level summary is shown in Figure 1.
 
@@ -188,7 +188,7 @@ $$
 
 Our architecture estimates inverse depth, $\hat{d}_n$, because it can represent points at infinite distance (such as sky). We can obtain inverse depth labels, $d_n$, from an RGBD sensor or stereo imagery. Pixels which do not have an inverse depth label are ignored in the loss.
 
-## 5. Experiments
+### 5. Experiments
 
 We demonstrate the efficacy of our method on CityScapes [13], a large dataset for road scene understanding. It comprises of stereo imagery, from automotive grade stereo cameras with a 22cm baseline, labelled with instance and semantic segmentations from 20 classes. Depth images are also provided, labelled using SGM [22], which we treat as pseudo ground truth. Additionally, we assign zero inverse depth to pixels labelled as sky. The dataset was collected from a number of cities in fine weather and consists of 2,975 training and 500 validation images at 2048 × 1024 resolution. 1,525 images are withheld for testing on an online evaluation server.
 
@@ -206,7 +206,7 @@ In Appendix B we find that our task-uncertainty loss is robust to the initialisa
 
 Finally, we benchmark our model using the full-size CityScapes dataset. In Table 2 we compare to a number of other state of the art methods in all three tasks. Our method is the first model which completes all three tasks with a single model. We compare favourably with other approaches, outperforming many which use comparable training data and inference tools. Figure 5 shows some qualitative examples of our model.
 
-## 6. Conclusions
+### 6. Conclusions
 
 We have shown that correctly weighting loss terms is of paramount importance for multi-task learning problems. We demonstrated that homoscedastic (task) uncertainty is an effective way to weight losses. We derived a principled loss function which can learn a relative weighting automatically from the data and is robust to the weight initialisation. We showed that this can improve performance for scene understanding tasks with a unified architecture for semantic segmentation, instance segmentation and per-pixel depth regression. We demonstrated modelling task-dependent homoscedastic uncertainty improves the model's representation and each task's performance when compared to separate models trained on each task individually.
 
