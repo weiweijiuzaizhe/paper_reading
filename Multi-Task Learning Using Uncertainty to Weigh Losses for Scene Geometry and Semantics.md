@@ -34,7 +34,7 @@ In summary, the key contributions of this paper are:
 ![image.png](https://s2.loli.net/2024/11/14/AMaCr3LvnXkHTSb.jpg)
 ##### Figure 1: Multi-task deep learning
 
-We derive a principled way of combining multiple regression and classification loss functions for multi-task learning. Our architecture takes a single monocular RGB image as input and produces a pixel-wise classification, an instance semantic segmentation and an estimate of per pixel depth. Multi-task learning can improve accuracy over separately trained models because cues from one task, such as depth, are used to regularize and improve the generalization of another domain, such as segmentation.
+<x-small>We derive a principled way of combining multiple regression and classification loss functions for multi-task learning. Our architecture takes a single monocular RGB image as input and produces a pixel-wise classification, an instance semantic segmentation and an estimate of per pixel depth. Multi-task learning can improve accuracy over separately trained models because cues from one task, such as depth, are used to regularize and improve the generalization of another domain, such as segmentation.</x-small>
 
 
 ### 2. Related Work
