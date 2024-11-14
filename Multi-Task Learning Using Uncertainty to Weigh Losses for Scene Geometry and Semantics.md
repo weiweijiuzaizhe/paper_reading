@@ -223,6 +223,15 @@ $$
 Our architecture estimates inverse depth, $\hat{d}_n$, because it can represent points at infinite distance (such as sky). We can obtain inverse depth labels, $d_n$, from an RGBD sensor or stereo imagery. Pixels which do not have an inverse depth label are ignored in the loss.
 
 ### 5. Experiments
+![image.png](https://s2.loli.net/2024/11/14/yDniPFzOkWTaAcZ.jpg)
+
+
+### Table 1: Quantitative improvement when learning semantic segmentation, instance segmentation and depth with our multi-task loss.
+
+Experiments were conducted on the Tiny CityScapes dataset (sub-sampled to a resolution of 128 × 256). Results are shown from the validation set. We observe an improvement in performance when training with our multi-task loss, over both single-task models and weighted losses. Additionally, we observe an improvement when training on all three tasks (3 × √) using our multi-task loss, compared with all pairs of tasks alone (denoted by 2 × √). This shows that our loss function can automatically learn a better performing weighting between the tasks than the baselines.
+
+
+
 
 We demonstrate the efficacy of our method on CityScapes [13], a large dataset for road scene understanding. It comprises of stereo imagery, from automotive grade stereo cameras with a 22cm baseline, labelled with instance and semantic segmentations from 20 classes. Depth images are also provided, labelled using SGM [22], which we treat as pseudo ground truth. Additionally, we assign zero inverse depth to pixels labelled as sky. The dataset was collected from a number of cities in fine weather and consists of 2,975 training and 500 validation images at 2048 × 1024 resolution. 1,525 images are withheld for testing on an online evaluation server.
 
@@ -241,6 +250,12 @@ In Appendix B we find that our task-uncertainty loss is robust to the initialisa
 Finally, we benchmark our model using the full-size CityScapes dataset. In Table 2 we compare to a number of other state of the art methods in all three tasks. Our method is the first model which completes all three tasks with a single model. We compare favourably with other approaches, outperforming many which use comparable training data and inference tools. Figure 5 shows some qualitative examples of our model.
 
 ### 6. Conclusions
+
+![image.png](https://s2.loli.net/2024/11/14/rMPVtNcRnUugiCq.jpg)
+
+### Table 2: CityScapes Benchmark [13]
+
+We show results from the test dataset using the full resolution of 1024 × 2048 pixels. For the full leaderboard, please see [www.cityscapes-dataset.com/benchmarks](https://www.cityscapes-dataset.com/benchmarks). The disparity (inverse depth) metrics were computed against the CityScapes depth maps, which are sparse and computed using SGM stereo [21]. Note, these comparisons are not entirely fair, as many methods use ensembles of different training datasets. Our method is the first to address all three tasks with a single model.
 
 
 
