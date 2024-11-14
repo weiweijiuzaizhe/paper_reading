@@ -78,15 +78,15 @@ In a multi-task setting, we show that the task uncertainty captures the relative
 
 #### 3.2. Multi-task Likelihoods
 
-In this section, we derive a multi-task loss function based on maximizing the Gaussian likelihood with homoscedastic uncertainty. Let \( f^W(x) \) be the output of a neural network with weights \( W \) on input \( x \). We define the following probabilistic model. For regression tasks, we define our likelihood as a Gaussian with mean given by the model output:
+In this section, we derive a multi-task loss function based on maximizing the Gaussian likelihood with homoscedastic uncertainty. Let $f^W(x)$ be the output of a neural network with weights $W$ on input $x$. We define the following probabilistic model. For regression tasks, we define our likelihood as a Gaussian with mean given by the model output:
 
 $$  p(y|f^W(x)) = \mathcal{N}(f^W(x), \sigma^2) \quad \qquad(2)  $$
 
-with an observation noise scalar \( \sigma \). For classification, we often squash the model output through a softmax function, and sample from the resulting probability vector:
+with an observation noise scalar $\sigma$. For classification, we often squash the model output through a softmax function, and sample from the resulting probability vector:
 
 $$ p(y|f^W(x)) = \text{Softmax}(f^W(x)) \quad \qquad(3) $$
 
-In the case of multiple model outputs, we often define the likelihood to factorize over the outputs, given some sufficient statistics. We define \( f^W(x) \) as our sufficient statistics, and obtain the following multi-task likelihood:
+In the case of multiple model outputs, we often define the likelihood to factorize over the outputs, given some sufficient statistics. We define $f^W(x)$ as our sufficient statistics, and obtain the following multi-task likelihood:
 
 $$ p(y_1, \ldots, y_K|f^W(x)) = p(y_1|f^W(x)) \cdots p(y_K|f^W(x)) \quad (4) $$
 
@@ -102,7 +102,7 @@ Let us now assume that our model output is composed of two vectors $y_1$ and $y_
 
 $$ p(y_1, y_2|f^W(x)) = p(y_1|f^W(x)) \cdot p(y_2|f^W(x)) = \mathcal{N}(y_1; f^W(x), \sigma_1^2) \cdot \mathcal{N}(y_2; f^W(x), \sigma_2^2)  \qquad\qquad  (6) $$
 
-This leads to the minimization objective, \( \mathcal{L}(W, \sigma_1, \sigma_2) \) (our loss) for our multi-output model:
+This leads to the minimization objective, $\mathcal{L}(W, \sigma_1, \sigma_2)$ (our loss) for our multi-output model:
 
 $$-\log p(y_1, y_2|f^W(x)) \propto \frac{1}{2\sigma_1^2} \|y_1 - f^W(x)\|^2 + \frac{1}{2\sigma_2^2} \|y_2 - f^W(x)\|^2 + \log \sigma_1 \sigma_2 $$
 
