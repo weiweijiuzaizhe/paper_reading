@@ -90,7 +90,7 @@ In the case of multiple model outputs, we often define the likelihood to factori
 
 $$ p(y_1, \ldots, y_K|f^W(x)) = p(y_1|f^W(x)) \cdots p(y_K|f^W(x)) \quad (4) $$
 
-with model outputs \( y_1, \ldots, y_K \) (such as semantic segmentation, depth regression, etc.).
+with model outputs $y_1, \ldots, y_K$ (such as semantic segmentation, depth regression, etc.).
 
 In maximum likelihood inference, we maximize the log likelihood of the model. In regression, for example, the log likelihood can be written as:
 
